@@ -1,0 +1,10 @@
+[
+    { "id": "pushups", "label": "Push-ups", "goal": 100 },
+    { "id": "situps", "label": "Sit-ups", "goal": 100 },
+    { "id": "squats", "label": "Squats", "goal": 100 },
+    { "id": "running", "label": "Run", "goal": "10 km" },
+    { "id": "plank", "label": "Plank Hold", "goal": "1 min" },
+    { "id": "jumprope", "label": "Jump Rope", "goal": 500 },
+    { "id": "shadowbox", "label": "Shadow Boxing", "goal": "5 min" }
+  ]
+  
