@@ -110,7 +110,7 @@ export default function DailyQuestPage() {
   const hours = Math.floor(timeLeft / 1000 / 60 / 60);
   const minutes = Math.floor((timeLeft / 1000 / 60) % 60);
   const seconds = Math.floor((timeLeft / 1000) % 60);
-  const timeColor = timeLeft < 10800000 ? (timeLeft < 3600000 ? "text-red-400" : "text-yellow-400") : "text-green-400";
+  const timeColor = timeLeft > 21600000 ? "text-green-400" : timeLeft > 10800000 ? "text-yellow-400" : "text-red-400";
 
   return (
     <main className="min-h-screen bg-gray-950 text-white px-6 py-8 font-mono relative">
