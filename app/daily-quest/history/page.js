@@ -13,9 +13,14 @@ export default function HistoryPage() {
   const router = useRouter();
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) router.push("/");
+    if (user === null) {
+      router.push("/");
+    } else if (user) {
+      setAuthLoading(false);
+    }
   }, [user]);
 
   useEffect(() => {
@@ -50,7 +55,7 @@ export default function HistoryPage() {
     fetchHistory();
   }, [user]);
 
-  if (!user) return null;
+  if (authLoading) return <div className="p-8 text-white animate-pulse">Checking login...</div>;
   if (loading) return <div className="p-8 text-white">Loading history...</div>;
 
   return (

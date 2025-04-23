@@ -8,55 +8,40 @@ import { useUserAuth } from "./_utils/auth-context";
 import {
   getDailyQuests,
   markQuestComplete,
-  getUserQuestStatus,
-  getUserCompletionMap
+  getUserQuestStatus
 } from "./_services/quest-service";
 import {
   calculateProgressToNext,
   calculateRank
 } from "./_utils/xp-utils";
 import Link from "next/link";
-import { format, subDays } from "date-fns";
 
 export default function DailyQuestPage() {
   const { user } = useUserAuth();
-  const router = useRouter();
   const userId = user?.uid;
+  const router = useRouter();
   const [xp, setXp] = useState(0);
   const [questIds, setQuestIds] = useState([]);
   const [checked, setChecked] = useState([]);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
   const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
-    if (!user) router.push("/");
+    if (user) setAuthLoading(false);
+    else router.push("/");
   }, [user]);
 
   useEffect(() => {
     if (!userId) return;
     async function fetchData() {
       try {
-        const today = format(new Date(), "yyyy-MM-dd");
-        const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd");
         const todayQuests = getDailyQuests();
         const completedQuests = await getUserQuestStatus(userId);
-        const completionMap = await getUserCompletionMap(userId);
-
-        const userCreatedDate = Object.keys(completionMap).sort()[0];
-        const shouldPenalty =
-          userCreatedDate &&
-          yesterday >= userCreatedDate &&
-          !completionMap[yesterday]?.length;
-
-        if (shouldPenalty) {
-          todayQuests.push("penalty_pushups", "penalty_run");
-        }
-
         setQuestIds(todayQuests);
         setChecked(completedQuests);
         setXp(completedQuests.length * 25);
-
         if (completedQuests.length === todayQuests.length) {
           setSubmitted(true);
         }
@@ -93,7 +78,14 @@ export default function DailyQuestPage() {
     }
   };
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="p-8 text-white animate-pulse">
+        Redirecting to sign-in...
+      </div>
+    );
+  }
+
   if (loading) return <div className="p-8 text-white">Loading quests...</div>;
 
   const displayQuests = questsData.filter(q => questIds.includes(q.id));
