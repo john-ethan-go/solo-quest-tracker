@@ -1,8 +1,8 @@
 "use client";
 
-import { useUserAuth } from "./daily-quest/_utils/auth-context";
-import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { useUserAuth } from "../daily-quest/_utils/auth-context";
+import { useRouter } from "next/navigation";
 
 export default function LandingPage() {
   const { user, gitHubSignIn } = useUserAuth();
@@ -10,7 +10,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     if (user) router.push("/daily-quest");
-  }, [user]);
+  }, [user, router]);
 
   return (
     <main className="h-screen bg-gray-950 flex items-center justify-center text-white text-center px-6">
@@ -31,7 +31,7 @@ export default function LandingPage() {
           Sign in with GitHub
         </button>
 
-        <p className="text-gray-500 text-xs mt-4">Powered by the System ©</p>
+        <p className="text-gray-500 text-xs mt-4">Powered by the System &copy;</p>
       </div>
     </main>
   );
