@@ -53,7 +53,7 @@ export default function HistoryPage() {
     }
 
     fetchHistory();
-  }, [user]);
+  }, [user, router]);
 
   if (authLoading) return <div className="p-8 text-white animate-pulse">Checking login...</div>;
   if (loading) return <div className="p-8 text-white">Loading history...</div>;

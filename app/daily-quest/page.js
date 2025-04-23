@@ -53,7 +53,7 @@ export default function DailyQuestPage() {
       }
     }
     fetchData();
-  }, [userId]);
+  }, [userId, router]);
 
   useEffect(() => {
     const updateCountdown = () => {
