@@ -1,36 +1,65 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import questsData from "./quests.json";
 import HeaderBar from "../_components/HeaderBar";
 import { useUserAuth } from "./_utils/auth-context";
 import {
   getDailyQuests,
   markQuestComplete,
-  getUserQuestStatus
+  getUserQuestStatus,
+  getUserCompletionMap
 } from "./_services/quest-service";
 import {
   calculateProgressToNext,
   calculateRank
 } from "./_utils/xp-utils";
+import Link from "next/link";
+import { format, subDays } from "date-fns";
 
 export default function DailyQuestPage() {
   const { user } = useUserAuth();
+  const router = useRouter();
   const userId = user?.uid;
   const [xp, setXp] = useState(0);
-  const [completed, setCompleted] = useState([]);
   const [questIds, setQuestIds] = useState([]);
+  const [checked, setChecked] = useState([]);
+  const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showToast, setShowToast] = useState(false);
+
+  useEffect(() => {
+    if (!user) router.push("/");
+  }, [user]);
 
   useEffect(() => {
     if (!userId) return;
     async function fetchData() {
       try {
+        const today = format(new Date(), "yyyy-MM-dd");
+        const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd");
         const todayQuests = getDailyQuests();
         const completedQuests = await getUserQuestStatus(userId);
+        const completionMap = await getUserCompletionMap(userId);
+
+        const userCreatedDate = Object.keys(completionMap).sort()[0];
+        const shouldPenalty =
+          userCreatedDate &&
+          yesterday >= userCreatedDate &&
+          !completionMap[yesterday]?.length;
+
+        if (shouldPenalty) {
+          todayQuests.push("penalty_pushups", "penalty_run");
+        }
+
         setQuestIds(todayQuests);
-        setCompleted(completedQuests);
+        setChecked(completedQuests);
         setXp(completedQuests.length * 25);
+
+        if (completedQuests.length === todayQuests.length) {
+          setSubmitted(true);
+        }
       } catch (err) {
         console.error("Error loading quests:", err);
       } finally {
@@ -40,16 +69,31 @@ export default function DailyQuestPage() {
     fetchData();
   }, [userId]);
 
-  const handleToggle = async (id) => {
-    if (!completed.includes(id)) {
-      await markQuestComplete(userId, id);
-      const updated = [...completed, id];
-      setCompleted(updated);
-      setXp(updated.length * 25);
+  const toggleQuest = (id) => {
+    if (submitted) return;
+    setChecked(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleSubmitProgress = async () => {
+    if (!userId || submitted) return;
+    if (questIds.some(q => !checked.includes(q))) return;
+
+    try {
+      for (const questId of checked) {
+        await markQuestComplete(userId, questId);
+      }
+      setXp(checked.length * 25);
+      setSubmitted(true);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (err) {
+      console.error("Submit failed:", err);
     }
   };
 
-  if (!user) return <div className="p-8 text-white">Please sign in to continue.</div>;
+  if (!user) return null;
   if (loading) return <div className="p-8 text-white">Loading quests...</div>;
 
   const displayQuests = questsData.filter(q => questIds.includes(q.id));
@@ -57,13 +101,27 @@ export default function DailyQuestPage() {
   const progress = calculateProgressToNext(xp);
 
   return (
-    <main className="min-h-screen bg-gray-950 text-white px-6 py-8 font-mono">
+    <main className="min-h-screen bg-gray-950 text-white px-6 py-8 font-mono relative">
+      {showToast && (
+        <div className="fixed left-1/2 top-6 transform -translate-x-1/2 animate-fadeInScale z-50 bg-cyan-800 border border-cyan-400 text-cyan-200 px-6 py-3 rounded shadow-md">
+          [System] Progress Submitted.
+        </div>
+      )}
+
       <div className="max-w-xl mx-auto">
         <HeaderBar />
 
-        <h1 className="text-3xl font-bold mb-4 text-cyan-300 tracking-wide drop-shadow">
-          📋 Daily Quests
-        </h1>
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-3xl font-bold text-cyan-300 tracking-wide drop-shadow">
+            📋 Daily Quests
+          </h1>
+          <Link
+            href="/daily-quest/history"
+            className="text-sm text-blue-400 underline hover:text-blue-300"
+          >
+            View History
+          </Link>
+        </div>
 
         <div className="mb-6 bg-gray-800 p-4 border border-cyan-500 rounded">
           <div className="text-sm text-cyan-200">Rank: <span className="text-yellow-300 font-semibold">{progress.current}</span></div>
@@ -85,8 +143,9 @@ export default function DailyQuestPage() {
                   type="checkbox"
                   id={q.id}
                   className="w-5 h-5"
-                  checked={completed.includes(q.id)}
-                  onChange={() => handleToggle(q.id)}
+                  checked={checked.includes(q.id)}
+                  onChange={() => toggleQuest(q.id)}
+                  disabled={submitted}
                 />
                 <label htmlFor={q.id} className="text-lg">{q.label} ({q.goal})</label>
               </li>
@@ -100,7 +159,7 @@ export default function DailyQuestPage() {
             <ul className="space-y-1">
               {optionalQuests.map((q, idx) => (
                 <li key={q.id} className="flex items-center gap-3">
-                  <input type="checkbox" id={`opt-${idx}`} className="w-4 h-4" />
+                  <input type="checkbox" id={`opt-${idx}`} className="w-4 h-4" disabled={submitted} />
                   <label htmlFor={`opt-${idx}`}>{q.label} ({q.goal})</label>
                 </li>
               ))}
@@ -109,7 +168,11 @@ export default function DailyQuestPage() {
         </section>
 
         <div className="flex gap-4 mt-8">
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold tracking-wide shadow-md">
+          <button
+            onClick={handleSubmitProgress}
+            disabled={submitted || questIds.some(q => !checked.includes(q))}
+            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded font-bold tracking-wide shadow-md"
+          >
             Submit Progress
           </button>
           <button className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded font-bold tracking-wide shadow-md">
@@ -117,6 +180,22 @@ export default function DailyQuestPage() {
           </button>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes fadeInScale {
+          0% {
+            opacity: 0;
+            transform: scale(0.8) translateX(-50%);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1) translateX(-50%);
+          }
+        }
+        .animate-fadeInScale {
+          animation: fadeInScale 0.4s ease-out forwards;
+        }
+      `}</style>
     </main>
   );
 }
