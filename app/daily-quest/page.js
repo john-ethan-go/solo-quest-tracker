@@ -27,6 +27,7 @@ export default function DailyQuestPage() {
   const [loading, setLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
   const [showToast, setShowToast] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0);
 
   useEffect(() => {
     if (user) setAuthLoading(false);
@@ -53,6 +54,20 @@ export default function DailyQuestPage() {
     }
     fetchData();
   }, [userId]);
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date();
+      const end = new Date();
+      end.setHours(23, 59, 59, 999);
+      const diff = Math.max(0, end - now);
+      setTimeLeft(diff);
+    };
+
+    updateCountdown();
+    const timer = setInterval(updateCountdown, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const toggleQuest = (id) => {
     if (submitted) return;
@@ -92,6 +107,11 @@ export default function DailyQuestPage() {
   const optionalQuests = questsData.filter(q => !questIds.includes(q.id));
   const progress = calculateProgressToNext(xp);
 
+  const hours = Math.floor(timeLeft / 1000 / 60 / 60);
+  const minutes = Math.floor((timeLeft / 1000 / 60) % 60);
+  const seconds = Math.floor((timeLeft / 1000) % 60);
+  const timeColor = timeLeft < 10800000 ? (timeLeft < 3600000 ? "text-red-400" : "text-yellow-400") : "text-green-400";
+
   return (
     <main className="min-h-screen bg-gray-950 text-white px-6 py-8 font-mono relative">
       {showToast && (
@@ -124,6 +144,9 @@ export default function DailyQuestPage() {
             ></div>
           </div>
           <div className="text-xs text-cyan-300 mt-1">{progress.percent}% to {progress.next}</div>
+          <div className={`mt-2 text-sm font-semibold ${timeColor}`}>
+            ⏳ Time left today: {hours}h {minutes}m {seconds}s
+          </div>
         </div>
 
         <section className="mb-8">
