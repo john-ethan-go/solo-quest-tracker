@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useUserAuth } from "../daily-quest/_utils/auth-context";
+import { useUserAuth } from "./daily-quest/_utils/auth-context";
 import { useRouter } from "next/navigation";
 
 export default function LandingPage() {
